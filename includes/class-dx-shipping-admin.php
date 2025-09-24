@@ -62,6 +62,9 @@ class DX_Shipping_Admin {
             return;
         }
 
+        // Get current tab
+        $current_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'overview';
+
         // Get shipping zones using our method
         $zones = WC_Shipping_Zones::get_zones();
         $dx_shipping_instances = array();
@@ -97,51 +100,183 @@ class DX_Shipping_Admin {
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
-            <div class="dx-shipping-admin-wrapper">
-                <!-- Overview Section -->
-                <div class="card">
-                    <h2><?php _e('Overview', 'dx-shipping-woocommerce'); ?></h2>
-                    <p><?php _e('DX Shipping provides weight-based shipping calculations for WooCommerce.', 'dx-shipping-woocommerce'); ?></p>
-                    <p><?php _e('Configure your shipping zones and rates below.', 'dx-shipping-woocommerce'); ?></p>
-                </div>
+            <!-- WordPress Native Tabs -->
+            <nav class="nav-tab-wrapper wp-clearfix">
+                <a href="?page=dx-shipping-settings&tab=overview" class="nav-tab <?php echo $current_tab === 'overview' ? 'nav-tab-active' : ''; ?>">
+                    <?php _e('Overview', 'dx-shipping-woocommerce'); ?>
+                </a>
+                <a href="?page=dx-shipping-settings&tab=zones" class="nav-tab <?php echo $current_tab === 'zones' ? 'nav-tab-active' : ''; ?>">
+                    <?php _e('Shipping Zones', 'dx-shipping-woocommerce'); ?>
+                </a>
+                <a href="?page=dx-shipping-settings&tab=insurance" class="nav-tab <?php echo $current_tab === 'insurance' ? 'nav-tab-active' : ''; ?>">
+                    <?php _e('Insurance', 'dx-shipping-woocommerce'); ?>
+                </a>
+                <a href="?page=dx-shipping-settings&tab=tools" class="nav-tab <?php echo $current_tab === 'tools' ? 'nav-tab-active' : ''; ?>">
+                    <?php _e('Tools', 'dx-shipping-woocommerce'); ?>
+                </a>
+            </nav>
 
-                <!-- Active Instances -->
-                <div class="card">
-                    <h2><?php _e('Active Shipping Zones', 'dx-shipping-woocommerce'); ?></h2>
-                    <?php if (empty($dx_shipping_instances)): ?>
-                        <p><?php _e('No DX Shipping methods have been configured yet.', 'dx-shipping-woocommerce'); ?></p>
-                        <p>
-                            <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=shipping'); ?>" class="button button-primary">
-                                <?php _e('Configure Shipping Zones', 'dx-shipping-woocommerce'); ?>
-                            </a>
-                        </p>
+            <div class="tab-content">
+                <?php
+                switch ($current_tab) {
+                    case 'zones':
+                        $this->render_zones_tab($dx_shipping_instances);
+                        break;
+                    case 'insurance':
+                        $this->render_insurance_tab();
+                        break;
+                    case 'tools':
+                        $this->render_tools_tab();
+                        break;
+                    case 'overview':
+                    default:
+                        $this->render_overview_tab();
+                        break;
+                }
+                ?>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render Overview Tab
+     */
+    private function render_overview_tab() {
+        ?>
+        <div class="postbox">
+            <div class="inside">
+                <h2><?php _e('Welcome to DX Shipping for WooCommerce', 'dx-shipping-woocommerce'); ?></h2>
+                <p><?php _e('This plugin provides weight-based shipping calculations with configurable base rates and per-kg charges for excess weight.', 'dx-shipping-woocommerce'); ?></p>
+
+                <h3><?php _e('Key Features', 'dx-shipping-woocommerce'); ?></h3>
+                <ul class="ul-disc">
+                    <li><?php _e('Weight-based shipping calculations', 'dx-shipping-woocommerce'); ?></li>
+                    <li><?php _e('Configurable base rates and excess weight charges', 'dx-shipping-woocommerce'); ?></li>
+                    <li><?php _e('UK postcode exclusions for non-mainland areas', 'dx-shipping-woocommerce'); ?></li>
+                    <li><?php _e('Hidden insurance fees for products and categories', 'dx-shipping-woocommerce'); ?></li>
+                    <li><?php _e('Free shipping threshold based on order value', 'dx-shipping-woocommerce'); ?></li>
+                    <li><?php _e('Debug mode for troubleshooting', 'dx-shipping-woocommerce'); ?></li>
+                </ul>
+
+                <h3><?php _e('Quick Links', 'dx-shipping-woocommerce'); ?></h3>
+                <p>
+                    <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=shipping'); ?>" class="button button-primary">
+                        <?php _e('Configure Shipping Zones', 'dx-shipping-woocommerce'); ?>
+                    </a>
+                    <a href="<?php echo admin_url('admin.php?page=wc-status&tab=logs'); ?>" class="button">
+                        <?php _e('View Debug Logs', 'dx-shipping-woocommerce'); ?>
+                    </a>
+                    <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=general'); ?>" class="button">
+                        <?php _e('Currency & Weight Settings', 'dx-shipping-woocommerce'); ?>
+                    </a>
+                </p>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render Zones Tab
+     */
+    private function render_zones_tab($dx_shipping_instances) {
+        ?>
+        <div class="postbox">
+            <div class="inside">
+                <h2><?php _e('Active Shipping Zones', 'dx-shipping-woocommerce'); ?></h2>
+
+                <?php if (empty($dx_shipping_instances)): ?>
+                    <p><?php _e('No DX Shipping methods have been configured yet.', 'dx-shipping-woocommerce'); ?></p>
+                    <p>
+                        <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=shipping'); ?>" class="button button-primary">
+                            <?php _e('Configure Shipping Zones', 'dx-shipping-woocommerce'); ?>
+                        </a>
+                    </p>
+                <?php else: ?>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th><?php _e('Zone', 'dx-shipping-woocommerce'); ?></th>
+                                <th><?php _e('Method Title', 'dx-shipping-woocommerce'); ?></th>
+                                <th><?php _e('Status', 'dx-shipping-woocommerce'); ?></th>
+                                <th><?php _e('Actions', 'dx-shipping-woocommerce'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($dx_shipping_instances as $instance): ?>
+                                <tr>
+                                    <td><?php echo esc_html($instance['zone_name']); ?></td>
+                                    <td><?php echo esc_html($instance['title']); ?></td>
+                                    <td>
+                                        <?php if ('yes' === $instance['enabled']): ?>
+                                            <span class="dashicons dashicons-yes-alt" style="color: green;"></span>
+                                            <?php _e('Enabled', 'dx-shipping-woocommerce'); ?>
+                                        <?php else: ?>
+                                            <span class="dashicons dashicons-dismiss" style="color: red;"></span>
+                                            <?php _e('Disabled', 'dx-shipping-woocommerce'); ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=shipping&zone_id=' . $instance['zone_id']); ?>" class="button button-small">
+                                            <?php _e('Edit Zone', 'dx-shipping-woocommerce'); ?>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render Insurance Tab
+     */
+    private function render_insurance_tab() {
+        $products_with_insurance = $this->get_products_with_insurance();
+        $categories_with_insurance = $this->get_categories_with_insurance();
+        ?>
+        <div class="postbox">
+            <div class="inside">
+                <h2><?php _e('Shipping Insurance Configuration', 'dx-shipping-woocommerce'); ?></h2>
+                <p><?php _e('Products and categories can have hidden insurance fees that are automatically added to the shipping cost.', 'dx-shipping-woocommerce'); ?></p>
+
+                <!-- Sub-tabs for Products and Categories -->
+                <ul class="subsubsub">
+                    <li><a href="#" class="current" data-tab="products"><?php _e('Products', 'dx-shipping-woocommerce'); ?> <span class="count">(<?php echo count($products_with_insurance); ?>)</span></a> |</li>
+                    <li><a href="#" data-tab="categories"><?php _e('Categories', 'dx-shipping-woocommerce'); ?> <span class="count">(<?php echo count($categories_with_insurance); ?>)</span></a></li>
+                </ul>
+                <br class="clear">
+
+                <!-- Products Table -->
+                <div id="insurance-products" class="insurance-tab-content">
+                    <h3><?php _e('Products with Insurance', 'dx-shipping-woocommerce'); ?></h3>
+                    <?php if (empty($products_with_insurance)): ?>
+                        <p><?php _e('No products have insurance configured.', 'dx-shipping-woocommerce'); ?></p>
+                        <p><em><?php _e('To add insurance to a product, edit the product and look for the "Shipping Insurance" field in the Shipping tab.', 'dx-shipping-woocommerce'); ?></em></p>
                     <?php else: ?>
                         <table class="wp-list-table widefat fixed striped">
                             <thead>
                                 <tr>
-                                    <th><?php _e('Zone', 'dx-shipping-woocommerce'); ?></th>
-                                    <th><?php _e('Method Title', 'dx-shipping-woocommerce'); ?></th>
-                                    <th><?php _e('Status', 'dx-shipping-woocommerce'); ?></th>
+                                    <th><?php _e('Product', 'dx-shipping-woocommerce'); ?></th>
+                                    <th><?php _e('SKU', 'dx-shipping-woocommerce'); ?></th>
+                                    <th><?php _e('Insurance Amount', 'dx-shipping-woocommerce'); ?></th>
                                     <th><?php _e('Actions', 'dx-shipping-woocommerce'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($dx_shipping_instances as $instance): ?>
+                                <?php foreach ($products_with_insurance as $product): ?>
                                     <tr>
-                                        <td><?php echo esc_html($instance['zone_name']); ?></td>
-                                        <td><?php echo esc_html($instance['title']); ?></td>
                                         <td>
-                                            <?php if ('yes' === $instance['enabled']): ?>
-                                                <span class="dashicons dashicons-yes-alt" style="color: green;"></span>
-                                                <?php _e('Enabled', 'dx-shipping-woocommerce'); ?>
-                                            <?php else: ?>
-                                                <span class="dashicons dashicons-dismiss" style="color: red;"></span>
-                                                <?php _e('Disabled', 'dx-shipping-woocommerce'); ?>
-                                            <?php endif; ?>
+                                            <strong><?php echo esc_html($product['name']); ?></strong>
                                         </td>
+                                        <td><?php echo $product['sku'] ? esc_html($product['sku']) : '—'; ?></td>
+                                        <td><?php echo get_woocommerce_currency_symbol(); ?><?php echo number_format($product['insurance'], 2); ?></td>
                                         <td>
-                                            <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=shipping&zone_id=' . $instance['zone_id']); ?>" class="button">
-                                                <?php _e('Edit Zone', 'dx-shipping-woocommerce'); ?>
+                                            <a href="<?php echo admin_url('post.php?post=' . $product['id'] . '&action=edit'); ?>" class="button button-small">
+                                                <?php _e('Edit', 'dx-shipping-woocommerce'); ?>
                                             </a>
                                         </td>
                                     </tr>
@@ -151,234 +286,217 @@ class DX_Shipping_Admin {
                     <?php endif; ?>
                 </div>
 
-                <!-- Postcode Tester -->
-                <div class="card">
-                    <h2><?php _e('Postcode Exclusion Tester', 'dx-shipping-woocommerce'); ?></h2>
-                    <p><?php _e('Check if a postcode is excluded from DX delivery:', 'dx-shipping-woocommerce'); ?></p>
-
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">
-                                <label for="test_postcode_country"><?php _e('Country', 'dx-shipping-woocommerce'); ?></label>
-                            </th>
-                            <td>
-                                <select id="test_postcode_country">
-                                    <option value="GB">United Kingdom (GB)</option>
-                                    <option value="UK">United Kingdom (UK)</option>
-                                    <option value="IE">Ireland</option>
-                                    <option value="FR">France</option>
-                                    <option value="US">United States</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">
-                                <label for="test_postcode"><?php _e('Postcode', 'dx-shipping-woocommerce'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" id="test_postcode" placeholder="e.g. BT1 1AA" />
-                            </td>
-                        </tr>
-                    </table>
-
-                    <p>
-                        <button type="button" id="test-postcode" class="button button-primary">
-                            <?php _e('Test Postcode', 'dx-shipping-woocommerce'); ?>
-                        </button>
-                    </p>
-
-                    <div id="postcode-result" style="display: none;">
-                        <h3><?php _e('Result:', 'dx-shipping-woocommerce'); ?></h3>
-                        <p id="postcode-result-text"></p>
-                    </div>
-                </div>
-
-                <!-- Calculator Tool -->
-                <div class="card">
-                    <h2><?php _e('Shipping Calculator', 'dx-shipping-woocommerce'); ?></h2>
-                    <p><?php _e('Test your shipping calculations:', 'dx-shipping-woocommerce'); ?></p>
-
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">
-                                <label for="test_weight"><?php _e('Weight', 'dx-shipping-woocommerce'); ?></label>
-                            </th>
-                            <td>
-                                <input type="number" id="test_weight" step="0.01" min="0" value="25" />
-                                <span><?php echo get_option('woocommerce_weight_unit'); ?></span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">
-                                <label for="test_base_cost"><?php _e('Base Cost', 'dx-shipping-woocommerce'); ?></label>
-                            </th>
-                            <td>
-                                <input type="number" id="test_base_cost" step="0.01" min="0" value="8.00" />
-                                <span><?php echo get_woocommerce_currency_symbol(); ?></span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">
-                                <label for="test_threshold"><?php _e('Weight Threshold', 'dx-shipping-woocommerce'); ?></label>
-                            </th>
-                            <td>
-                                <input type="number" id="test_threshold" step="0.01" min="0" value="20" />
-                                <span><?php echo get_option('woocommerce_weight_unit'); ?></span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">
-                                <label for="test_excess_rate"><?php _e('Excess Rate', 'dx-shipping-woocommerce'); ?></label>
-                            </th>
-                            <td>
-                                <input type="number" id="test_excess_rate" step="0.01" min="0" value="0.40" />
-                                <span><?php echo get_woocommerce_currency_symbol(); ?>/<?php echo get_option('woocommerce_weight_unit'); ?></span>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <p>
-                        <button type="button" id="calculate-shipping" class="button button-primary">
-                            <?php _e('Calculate', 'dx-shipping-woocommerce'); ?>
-                        </button>
-                    </p>
-
-                    <div id="calculation-result" style="display: none;">
-                        <h3><?php _e('Result:', 'dx-shipping-woocommerce'); ?></h3>
-                        <p id="result-text"></p>
-                    </div>
-                </div>
-
-                <!-- Insurance Overview -->
-                <div class="card">
-                    <h2><?php _e('Shipping Insurance Overview', 'dx-shipping-woocommerce'); ?></h2>
-                    <p><?php _e('Products and categories with insurance fees configured:', 'dx-shipping-woocommerce'); ?></p>
-
-                    <?php
-                    // Get products with insurance
-                    $products_with_insurance = $this->get_products_with_insurance();
-                    $categories_with_insurance = $this->get_categories_with_insurance();
-                    ?>
-
-                    <div style="display: flex; gap: 20px;">
-                        <div style="flex: 1;">
-                            <h3><?php _e('Products', 'dx-shipping-woocommerce'); ?></h3>
-                            <?php if (empty($products_with_insurance)): ?>
-                                <p style="color: #666; font-style: italic;"><?php _e('No products have insurance configured.', 'dx-shipping-woocommerce'); ?></p>
-                            <?php else: ?>
-                                <table class="wp-list-table widefat fixed striped" style="margin-top: 10px;">
-                                    <thead>
-                                        <tr>
-                                            <th><?php _e('Product', 'dx-shipping-woocommerce'); ?></th>
-                                            <th style="width: 100px;"><?php _e('Insurance', 'dx-shipping-woocommerce'); ?></th>
-                                            <th style="width: 80px;"><?php _e('Action', 'dx-shipping-woocommerce'); ?></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($products_with_insurance as $product): ?>
-                                            <tr>
-                                                <td>
-                                                    <?php echo esc_html($product['name']); ?>
-                                                    <?php if ($product['sku']): ?>
-                                                        <br><small><?php _e('SKU:', 'dx-shipping-woocommerce'); ?> <?php echo esc_html($product['sku']); ?></small>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td><?php echo get_woocommerce_currency_symbol(); ?><?php echo number_format($product['insurance'], 2); ?></td>
-                                                <td>
-                                                    <a href="<?php echo admin_url('post.php?post=' . $product['id'] . '&action=edit'); ?>" class="button button-small">
-                                                        <?php _e('Edit', 'dx-shipping-woocommerce'); ?>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            <?php endif; ?>
-                        </div>
-
-                        <div style="flex: 1;">
-                            <h3><?php _e('Categories', 'dx-shipping-woocommerce'); ?></h3>
-                            <?php if (empty($categories_with_insurance)): ?>
-                                <p style="color: #666; font-style: italic;"><?php _e('No categories have insurance configured.', 'dx-shipping-woocommerce'); ?></p>
-                            <?php else: ?>
-                                <table class="wp-list-table widefat fixed striped" style="margin-top: 10px;">
-                                    <thead>
-                                        <tr>
-                                            <th><?php _e('Category', 'dx-shipping-woocommerce'); ?></th>
-                                            <th style="width: 100px;"><?php _e('Insurance', 'dx-shipping-woocommerce'); ?></th>
-                                            <th style="width: 80px;"><?php _e('Action', 'dx-shipping-woocommerce'); ?></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($categories_with_insurance as $category): ?>
-                                            <tr>
-                                                <td>
-                                                    <?php echo esc_html($category['name']); ?>
-                                                    <br><small><?php
-                                                        printf(
-                                                            _n('%d product', '%d products', $category['count'], 'dx-shipping-woocommerce'),
-                                                            $category['count']
-                                                        );
-                                                    ?></small>
-                                                </td>
-                                                <td><?php echo get_woocommerce_currency_symbol(); ?><?php echo number_format($category['insurance'], 2); ?></td>
-                                                <td>
-                                                    <a href="<?php echo admin_url('term.php?taxonomy=product_cat&tag_ID=' . $category['id'] . '&post_type=product'); ?>" class="button button-small">
-                                                        <?php _e('Edit', 'dx-shipping-woocommerce'); ?>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Links -->
-                <div class="card">
-                    <h2><?php _e('Quick Links', 'dx-shipping-woocommerce'); ?></h2>
-                    <ul>
-                        <li>
-                            <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=shipping'); ?>">
-                                <?php _e('WooCommerce Shipping Settings', 'dx-shipping-woocommerce'); ?>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="<?php echo admin_url('admin.php?page=wc-status&tab=logs'); ?>">
-                                <?php _e('View Debug Logs', 'dx-shipping-woocommerce'); ?>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=general'); ?>">
-                                <?php _e('Currency & Weight Units', 'dx-shipping-woocommerce'); ?>
-                            </a>
-                        </li>
-                    </ul>
+                <!-- Categories Table -->
+                <div id="insurance-categories" class="insurance-tab-content" style="display: none;">
+                    <h3><?php _e('Categories with Insurance', 'dx-shipping-woocommerce'); ?></h3>
+                    <?php if (empty($categories_with_insurance)): ?>
+                        <p><?php _e('No categories have insurance configured.', 'dx-shipping-woocommerce'); ?></p>
+                        <p><em><?php _e('To add insurance to a category, edit the category and look for the "Shipping Insurance" field.', 'dx-shipping-woocommerce'); ?></em></p>
+                    <?php else: ?>
+                        <table class="wp-list-table widefat fixed striped">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Category', 'dx-shipping-woocommerce'); ?></th>
+                                    <th><?php _e('Product Count', 'dx-shipping-woocommerce'); ?></th>
+                                    <th><?php _e('Insurance Amount', 'dx-shipping-woocommerce'); ?></th>
+                                    <th><?php _e('Actions', 'dx-shipping-woocommerce'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($categories_with_insurance as $category): ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?php echo esc_html($category['name']); ?></strong>
+                                        </td>
+                                        <td><?php echo $category['count']; ?></td>
+                                        <td><?php echo get_woocommerce_currency_symbol(); ?><?php echo number_format($category['insurance'], 2); ?></td>
+                                        <td>
+                                            <a href="<?php echo admin_url('term.php?taxonomy=product_cat&tag_ID=' . $category['id'] . '&post_type=product'); ?>" class="button button-small">
+                                                <?php _e('Edit', 'dx-shipping-woocommerce'); ?>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
 
-        <style>
-            .dx-shipping-admin-wrapper .card {
-                max-width: 800px;
-                margin-top: 20px;
-                padding: 20px;
-                background: #fff;
-                border: 1px solid #ccd0d4;
-                box-shadow: 0 1px 1px rgba(0,0,0,.04);
-            }
-            .dx-shipping-admin-wrapper .card h2 {
-                margin-top: 0;
-            }
-            #calculation-result {
-                margin-top: 20px;
-                padding: 15px;
-                background: #f0f8ff;
-                border-left: 4px solid #0073aa;
-            }
-        </style>
+        <script type="text/javascript">
+            jQuery(document).ready(function($) {
+                // Insurance sub-tabs
+                $('.subsubsub a').on('click', function(e) {
+                    e.preventDefault();
+                    var tab = $(this).data('tab');
+                    $('.subsubsub a').removeClass('current');
+                    $(this).addClass('current');
+                    $('.insurance-tab-content').hide();
+                    $('#insurance-' + tab).show();
+                });
+            });
+        </script>
+        <?php
+    }
+
+    /**
+     * Render Tools Tab
+     */
+    private function render_tools_tab() {
+        ?>
+        <!-- Postcode Tester -->
+        <div class="postbox">
+            <div class="inside">
+                <h2><?php _e('Postcode Exclusion Tester', 'dx-shipping-woocommerce'); ?></h2>
+                <p><?php _e('Check if a postcode is excluded from DX delivery:', 'dx-shipping-woocommerce'); ?></p>
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="test_postcode_country"><?php _e('Country', 'dx-shipping-woocommerce'); ?></label>
+                        </th>
+                        <td>
+                            <select id="test_postcode_country" class="regular-text">
+                                <option value="GB">United Kingdom (GB)</option>
+                                <option value="UK">United Kingdom (UK)</option>
+                                <option value="IE">Ireland</option>
+                                <option value="FR">France</option>
+                                <option value="US">United States</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="test_postcode"><?php _e('Postcode', 'dx-shipping-woocommerce'); ?></label>
+                        </th>
+                        <td>
+                            <input type="text" id="test_postcode" class="regular-text" placeholder="e.g. BT1 1AA" />
+                        </td>
+                    </tr>
+                </table>
+
+                <p>
+                    <button type="button" id="test-postcode" class="button button-primary">
+                        <?php _e('Test Postcode', 'dx-shipping-woocommerce'); ?>
+                    </button>
+                </p>
+
+                <div id="postcode-result" style="display: none; margin-top: 20px; padding: 15px; background: #f0f0f1; border-left: 4px solid #72aee6;">
+                    <h3 style="margin-top: 0;"><?php _e('Result:', 'dx-shipping-woocommerce'); ?></h3>
+                    <p id="postcode-result-text"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculator Tool -->
+        <div class="postbox">
+            <div class="inside">
+                <h2><?php _e('Shipping Calculator', 'dx-shipping-woocommerce'); ?></h2>
+                <p><?php _e('Calculate shipping cost based on weight using your configured rates.', 'dx-shipping-woocommerce'); ?></p>
+
+                <?php
+                // Get first available DX shipping instance to use its settings
+                $default_settings = null;
+                $zones = WC_Shipping_Zones::get_zones();
+                foreach ($zones as $zone) {
+                    foreach ($zone['shipping_methods'] as $method) {
+                        if ('dx_shipping' === $method->id && 'yes' === $method->enabled) {
+                            $default_settings = array(
+                                'base_cost' => $method->get_option('base_cost', '8.00'),
+                                'weight_threshold' => $method->get_option('weight_threshold', '20'),
+                                'excess_rate' => $method->get_option('excess_rate', '0.40'),
+                                'zone_name' => $zone['zone_name']
+                            );
+                            break 2;
+                        }
+                    }
+                }
+
+                if (!$default_settings) {
+                    // Check Rest of the World zone
+                    $zone_0 = WC_Shipping_Zones::get_zone(0);
+                    foreach ($zone_0->get_shipping_methods() as $method) {
+                        if ('dx_shipping' === $method->id && 'yes' === $method->enabled) {
+                            $default_settings = array(
+                                'base_cost' => $method->get_option('base_cost', '8.00'),
+                                'weight_threshold' => $method->get_option('weight_threshold', '20'),
+                                'excess_rate' => $method->get_option('excess_rate', '0.40'),
+                                'zone_name' => __('Rest of the World', 'dx-shipping-woocommerce')
+                            );
+                            break;
+                        }
+                    }
+                }
+
+                // Use defaults if no configured method found
+                if (!$default_settings) {
+                    $default_settings = array(
+                        'base_cost' => '8.00',
+                        'weight_threshold' => '20',
+                        'excess_rate' => '0.40',
+                        'zone_name' => __('Default', 'dx-shipping-woocommerce')
+                    );
+                }
+                ?>
+
+                <div style="background: #f0f0f1; padding: 10px; margin-bottom: 20px; border-radius: 3px;">
+                    <strong><?php _e('Using rates from shipping zone:', 'dx-shipping-woocommerce'); ?></strong> <?php echo esc_html($default_settings['zone_name']); ?>
+                </div>
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="test_base_cost"><?php _e('Base Cost', 'dx-shipping-woocommerce'); ?></label>
+                        </th>
+                        <td>
+                            <span><?php echo get_woocommerce_currency_symbol(); ?></span>
+                            <input type="number" id="test_base_cost" class="small-text" step="0.01" min="0" value="<?php echo esc_attr($default_settings['base_cost']); ?>" readonly style="background-color: #f0f0f1;" />
+                            <span class="description"><?php _e('(configured in shipping zone)', 'dx-shipping-woocommerce'); ?></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="test_threshold"><?php _e('Weight Threshold', 'dx-shipping-woocommerce'); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" id="test_threshold" class="small-text" step="0.01" min="0" value="<?php echo esc_attr($default_settings['weight_threshold']); ?>" readonly style="background-color: #f0f0f1;" />
+                            <span class="description"><?php echo get_option('woocommerce_weight_unit'); ?> <?php _e('(configured in shipping zone)', 'dx-shipping-woocommerce'); ?></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="test_excess_rate"><?php _e('Excess Rate', 'dx-shipping-woocommerce'); ?></label>
+                        </th>
+                        <td>
+                            <span><?php echo get_woocommerce_currency_symbol(); ?></span>
+                            <input type="number" id="test_excess_rate" class="small-text" step="0.01" min="0" value="<?php echo esc_attr($default_settings['excess_rate']); ?>" readonly style="background-color: #f0f0f1;" />
+                            <span class="description">/ <?php echo get_option('woocommerce_weight_unit'); ?> <?php _e('(configured in shipping zone)', 'dx-shipping-woocommerce'); ?></span>
+                        </td>
+                    </tr>
+                    <tr style="border-top: 1px solid #c3c4c7;">
+                        <th scope="row">
+                            <label for="test_weight"><strong><?php _e('Package Weight', 'dx-shipping-woocommerce'); ?></strong></label>
+                        </th>
+                        <td>
+                            <input type="number" id="test_weight" class="regular-text" step="0.01" min="0" value="25" style="font-weight: bold;" />
+                            <span class="description"><?php echo get_option('woocommerce_weight_unit'); ?></span>
+                        </td>
+                    </tr>
+                </table>
+
+                <p>
+                    <button type="button" id="calculate-shipping" class="button button-primary">
+                        <?php _e('Calculate Shipping Cost', 'dx-shipping-woocommerce'); ?>
+                    </button>
+                </p>
+
+                <div id="calculation-result" style="display: none; margin-top: 20px; padding: 15px; background: #f0f8ff; border-left: 4px solid #0073aa;">
+                    <h3 style="margin-top: 0;"><?php _e('Result:', 'dx-shipping-woocommerce'); ?></h3>
+                    <p id="result-text"></p>
+                </div>
+            </div>
+        </div>
 
         <script type="text/javascript">
             jQuery(document).ready(function($) {
@@ -429,9 +547,11 @@ class DX_Shipping_Admin {
 
                     var resultText;
                     if (excluded) {
-                        resultText = '<span style="color: red;">❌ <?php _e('EXCLUDED', 'dx-shipping-woocommerce'); ?></span><br>' + reason;
+                        $('#postcode-result').css('border-left-color', '#d63638');
+                        resultText = '<span style="color: #d63638;">✕ <?php _e('EXCLUDED', 'dx-shipping-woocommerce'); ?></span><br>' + reason;
                     } else {
-                        resultText = '<span style="color: green;">✅ <?php _e('AVAILABLE for DX delivery', 'dx-shipping-woocommerce'); ?></span>';
+                        $('#postcode-result').css('border-left-color', '#00a32a');
+                        resultText = '<span style="color: #00a32a;">✓ <?php _e('AVAILABLE for DX delivery', 'dx-shipping-woocommerce'); ?></span>';
                     }
 
                     $('#postcode-result-text').html(resultText);
@@ -453,15 +573,38 @@ class DX_Shipping_Admin {
                         cost += excessWeight * excessRate;
                     }
 
-                    var resultText = '<?php _e('Shipping cost:', 'dx-shipping-woocommerce'); ?> ' +
-                                   '<?php echo get_woocommerce_currency_symbol(); ?>' + cost.toFixed(2);
+                    var resultText = '<div style="font-size: 24px; color: #0073aa; margin-bottom: 15px;">' +
+                                   '<strong><?php _e('Total Shipping Cost:', 'dx-shipping-woocommerce'); ?></strong> ' +
+                                   '<span style="color: #00a32a; font-size: 28px;"><?php echo get_woocommerce_currency_symbol(); ?>' + cost.toFixed(2) + '</span>' +
+                                   '</div>';
 
-                    if (excessWeight > 0) {
-                        resultText += '<br><?php _e('Excess weight:', 'dx-shipping-woocommerce'); ?> ' +
-                                    excessWeight.toFixed(2) + ' <?php echo get_option('woocommerce_weight_unit'); ?>';
-                        resultText += '<br><?php _e('Excess charge:', 'dx-shipping-woocommerce'); ?> ' +
-                                    '<?php echo get_woocommerce_currency_symbol(); ?>' +
-                                    (excessWeight * excessRate).toFixed(2);
+                    if (weight <= 0) {
+                        resultText = '<div style="font-size: 18px; color: #d63638;">' +
+                                   '<strong><?php _e('Please enter a valid weight', 'dx-shipping-woocommerce'); ?></strong>' +
+                                   '</div>';
+                        $('#calculation-result').css('border-left-color', '#d63638');
+                    } else if (excessWeight > 0) {
+                        $('#calculation-result').css('border-left-color', '#0073aa');
+                        resultText += '<div style="background: #f0f0f1; padding: 10px; border-radius: 3px; margin-top: 10px;">';
+                        resultText += '<strong><?php _e('Calculation Breakdown:', 'dx-shipping-woocommerce'); ?></strong>';
+                        resultText += '<table style="width: 100%; margin-top: 10px;">';
+                        resultText += '<tr><td><?php _e('Base cost', 'dx-shipping-woocommerce'); ?> (' + threshold + ' <?php echo get_option('woocommerce_weight_unit'); ?>):</td>' +
+                                    '<td style="text-align: right;"><strong><?php echo get_woocommerce_currency_symbol(); ?>' + baseCost.toFixed(2) + '</strong></td></tr>';
+                        resultText += '<tr><td><?php _e('Excess weight:', 'dx-shipping-woocommerce'); ?></td>' +
+                                    '<td style="text-align: right;"><strong>' + excessWeight.toFixed(2) + ' <?php echo get_option('woocommerce_weight_unit'); ?></strong></td></tr>';
+                        resultText += '<tr><td><?php _e('Excess charge', 'dx-shipping-woocommerce'); ?> (' + excessWeight.toFixed(2) + ' × <?php echo get_woocommerce_currency_symbol(); ?>' + excessRate + '):</td>' +
+                                    '<td style="text-align: right;"><strong><?php echo get_woocommerce_currency_symbol(); ?>' + (excessWeight * excessRate).toFixed(2) + '</strong></td></tr>';
+                        resultText += '<tr style="border-top: 2px solid #c3c4c7;"><td><strong><?php _e('Total:', 'dx-shipping-woocommerce'); ?></strong></td>' +
+                                    '<td style="text-align: right;"><strong style="color: #00a32a; font-size: 16px;"><?php echo get_woocommerce_currency_symbol(); ?>' + cost.toFixed(2) + '</strong></td></tr>';
+                        resultText += '</table>';
+                        resultText += '</div>';
+                    } else {
+                        $('#calculation-result').css('border-left-color', '#00a32a');
+                        resultText += '<div style="background: #f0f0f1; padding: 10px; border-radius: 3px; margin-top: 10px;">';
+                        resultText += '<strong><?php _e('Weight is within base threshold', 'dx-shipping-woocommerce'); ?></strong><br>';
+                        resultText += '<?php _e('Package weight:', 'dx-shipping-woocommerce'); ?> ' + weight + ' <?php echo get_option('woocommerce_weight_unit'); ?><br>';
+                        resultText += '<?php _e('Base rate applies (up to', 'dx-shipping-woocommerce'); ?> ' + threshold + ' <?php echo get_option('woocommerce_weight_unit'); ?>)';
+                        resultText += '</div>';
                     }
 
                     $('#result-text').html(resultText);
@@ -612,9 +755,32 @@ class DX_Shipping_Admin {
             return;
         }
 
-        // You can add custom admin CSS/JS here if needed
-        // wp_enqueue_style('dx-shipping-admin', DX_SHIPPING_PLUGIN_URL . 'assets/css/admin.css', array(), DX_SHIPPING_VERSION);
-        // wp_enqueue_script('dx-shipping-admin', DX_SHIPPING_PLUGIN_URL . 'assets/js/admin.js', array('jquery'), DX_SHIPPING_VERSION, true);
+        // Add some custom CSS for better styling
+        ?>
+        <style>
+            .postbox {
+                margin-top: 20px;
+            }
+            .postbox .inside {
+                padding: 20px;
+            }
+            .nav-tab-wrapper {
+                margin-bottom: 0;
+            }
+            .tab-content {
+                background: #fff;
+                border: 1px solid #c3c4c7;
+                border-top: none;
+                padding: 0;
+            }
+            .form-table th {
+                width: 200px;
+            }
+            .insurance-tab-content {
+                margin-top: 20px;
+            }
+        </style>
+        <?php
     }
 
     /**
