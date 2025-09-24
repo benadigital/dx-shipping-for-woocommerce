@@ -4,12 +4,12 @@
  * Plugin URI: https://francoshopfitters.co.uk
  * Description: Custom weight-based shipping method for WooCommerce with configurable base rates and per-kg charges. Default: £8.00 base + £0.40/kg over 20kg.
  * Version: 1.0.0
- * Author: Franco Shopfitters
- * Author URI: https://francoshopfitters.co.uk
+ * Author: BenaDigital
+ * Author URI: https://benadigital.com
  * Text Domain: dx-shipping-woocommerce
  * Domain Path: /languages
- * Requires at least: 5.8
- * Requires PHP: 7.4
+ * Requires at least: 5.5.1
+ * Requires PHP: 7.3
  * WC requires at least: 5.0
  * WC tested up to: 8.5
  * License: GPL v2 or later

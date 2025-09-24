@@ -249,6 +249,93 @@ class DX_Shipping_Admin {
                     </div>
                 </div>
 
+                <!-- Insurance Overview -->
+                <div class="card">
+                    <h2><?php _e('Shipping Insurance Overview', 'dx-shipping-woocommerce'); ?></h2>
+                    <p><?php _e('Products and categories with insurance fees configured:', 'dx-shipping-woocommerce'); ?></p>
+
+                    <?php
+                    // Get products with insurance
+                    $products_with_insurance = $this->get_products_with_insurance();
+                    $categories_with_insurance = $this->get_categories_with_insurance();
+                    ?>
+
+                    <div style="display: flex; gap: 20px;">
+                        <div style="flex: 1;">
+                            <h3><?php _e('Products', 'dx-shipping-woocommerce'); ?></h3>
+                            <?php if (empty($products_with_insurance)): ?>
+                                <p style="color: #666; font-style: italic;"><?php _e('No products have insurance configured.', 'dx-shipping-woocommerce'); ?></p>
+                            <?php else: ?>
+                                <table class="wp-list-table widefat fixed striped" style="margin-top: 10px;">
+                                    <thead>
+                                        <tr>
+                                            <th><?php _e('Product', 'dx-shipping-woocommerce'); ?></th>
+                                            <th style="width: 100px;"><?php _e('Insurance', 'dx-shipping-woocommerce'); ?></th>
+                                            <th style="width: 80px;"><?php _e('Action', 'dx-shipping-woocommerce'); ?></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($products_with_insurance as $product): ?>
+                                            <tr>
+                                                <td>
+                                                    <?php echo esc_html($product['name']); ?>
+                                                    <?php if ($product['sku']): ?>
+                                                        <br><small><?php _e('SKU:', 'dx-shipping-woocommerce'); ?> <?php echo esc_html($product['sku']); ?></small>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><?php echo get_woocommerce_currency_symbol(); ?><?php echo number_format($product['insurance'], 2); ?></td>
+                                                <td>
+                                                    <a href="<?php echo admin_url('post.php?post=' . $product['id'] . '&action=edit'); ?>" class="button button-small">
+                                                        <?php _e('Edit', 'dx-shipping-woocommerce'); ?>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+                        </div>
+
+                        <div style="flex: 1;">
+                            <h3><?php _e('Categories', 'dx-shipping-woocommerce'); ?></h3>
+                            <?php if (empty($categories_with_insurance)): ?>
+                                <p style="color: #666; font-style: italic;"><?php _e('No categories have insurance configured.', 'dx-shipping-woocommerce'); ?></p>
+                            <?php else: ?>
+                                <table class="wp-list-table widefat fixed striped" style="margin-top: 10px;">
+                                    <thead>
+                                        <tr>
+                                            <th><?php _e('Category', 'dx-shipping-woocommerce'); ?></th>
+                                            <th style="width: 100px;"><?php _e('Insurance', 'dx-shipping-woocommerce'); ?></th>
+                                            <th style="width: 80px;"><?php _e('Action', 'dx-shipping-woocommerce'); ?></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($categories_with_insurance as $category): ?>
+                                            <tr>
+                                                <td>
+                                                    <?php echo esc_html($category['name']); ?>
+                                                    <br><small><?php
+                                                        printf(
+                                                            _n('%d product', '%d products', $category['count'], 'dx-shipping-woocommerce'),
+                                                            $category['count']
+                                                        );
+                                                    ?></small>
+                                                </td>
+                                                <td><?php echo get_woocommerce_currency_symbol(); ?><?php echo number_format($category['insurance'], 2); ?></td>
+                                                <td>
+                                                    <a href="<?php echo admin_url('term.php?taxonomy=product_cat&tag_ID=' . $category['id'] . '&post_type=product'); ?>" class="button button-small">
+                                                        <?php _e('Edit', 'dx-shipping-woocommerce'); ?>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Quick Links -->
                 <div class="card">
                     <h2><?php _e('Quick Links', 'dx-shipping-woocommerce'); ?></h2>
@@ -383,6 +470,95 @@ class DX_Shipping_Admin {
             });
         </script>
         <?php
+    }
+
+    /**
+     * Get products with insurance values
+     */
+    private function get_products_with_insurance() {
+        $args = array(
+            'post_type' => 'product',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                array(
+                    'key' => '_dx_shipping_insurance',
+                    'value' => '',
+                    'compare' => '!=',
+                ),
+                array(
+                    'key' => '_dx_shipping_insurance',
+                    'value' => '0',
+                    'compare' => '!=',
+                ),
+            ),
+        );
+
+        $query = new WP_Query($args);
+        $products = array();
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $product_id = get_the_ID();
+                $product = wc_get_product($product_id);
+
+                if ($product) {
+                    $insurance = get_post_meta($product_id, '_dx_shipping_insurance', true);
+                    if ($insurance && $insurance > 0) {
+                        $products[] = array(
+                            'id' => $product_id,
+                            'name' => $product->get_name(),
+                            'sku' => $product->get_sku(),
+                            'insurance' => floatval($insurance),
+                        );
+                    }
+                }
+            }
+            wp_reset_postdata();
+        }
+
+        return $products;
+    }
+
+    /**
+     * Get categories with insurance values
+     */
+    private function get_categories_with_insurance() {
+        $args = array(
+            'taxonomy' => 'product_cat',
+            'hide_empty' => false,
+            'meta_query' => array(
+                array(
+                    'key' => 'dx_shipping_insurance',
+                    'value' => '',
+                    'compare' => '!=',
+                ),
+                array(
+                    'key' => 'dx_shipping_insurance',
+                    'value' => '0',
+                    'compare' => '!=',
+                ),
+            ),
+        );
+
+        $terms = get_terms($args);
+        $categories = array();
+
+        if (!is_wp_error($terms) && !empty($terms)) {
+            foreach ($terms as $term) {
+                $insurance = get_term_meta($term->term_id, 'dx_shipping_insurance', true);
+                if ($insurance && $insurance > 0) {
+                    $categories[] = array(
+                        'id' => $term->term_id,
+                        'name' => $term->name,
+                        'count' => $term->count,
+                        'insurance' => floatval($insurance),
+                    );
+                }
+            }
+        }
+
+        return $categories;
     }
 
     /**
