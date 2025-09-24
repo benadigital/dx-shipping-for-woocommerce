@@ -366,6 +366,7 @@ class DX_Shipping_Method extends WC_Shipping_Method {
      */
     private function calculate_insurance_fee($package) {
         $insurance_total = 0;
+        $products_with_insurance = array();
 
         if (empty($package['contents'])) {
             return $insurance_total;
@@ -373,13 +374,16 @@ class DX_Shipping_Method extends WC_Shipping_Method {
 
         foreach ($package['contents'] as $item_id => $values) {
             $_product = $values['data'];
-            $quantity = (int) $values['quantity'];
+            $product_id = $_product->get_id();
 
             // Check for product-level insurance
-            $product_insurance = get_post_meta($_product->get_id(), '_dx_shipping_insurance', true);
+            $product_insurance = get_post_meta($product_id, '_dx_shipping_insurance', true);
 
             if ($product_insurance && is_numeric($product_insurance)) {
-                $insurance_total += (float) $product_insurance * $quantity;
+                // Only add insurance once per unique product, not per quantity
+                if (!isset($products_with_insurance[$product_id])) {
+                    $products_with_insurance[$product_id] = (float) $product_insurance;
+                }
                 continue;
             }
 
@@ -396,8 +400,16 @@ class DX_Shipping_Method extends WC_Shipping_Method {
             }
 
             if ($category_insurance > 0) {
-                $insurance_total += $category_insurance * $quantity;
+                // Only add category insurance once per unique product, not per quantity
+                if (!isset($products_with_insurance[$product_id])) {
+                    $products_with_insurance[$product_id] = $category_insurance;
+                }
             }
+        }
+
+        // Sum all unique insurance fees (one per product type, regardless of quantity)
+        foreach ($products_with_insurance as $insurance_fee) {
+            $insurance_total += $insurance_fee;
         }
 
         return $insurance_total;

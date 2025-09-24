@@ -3,7 +3,7 @@
  * Plugin Name: DX Shipping for WooCommerce
  * Plugin URI: https://francoshopfitters.co.uk
  * Description: Custom weight-based shipping method for WooCommerce with configurable base rates and per-kg charges. Default: £8.00 base + £0.40/kg over 20kg.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: BenaDigital
  * Author URI: https://benadigital.com
  * Text Domain: dx-shipping-woocommerce
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('DX_SHIPPING_VERSION', '1.0.0');
+define('DX_SHIPPING_VERSION', '1.0.1');
 define('DX_SHIPPING_PLUGIN_FILE', __FILE__);
 define('DX_SHIPPING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DX_SHIPPING_PLUGIN_URL', plugin_dir_url(__FILE__));
